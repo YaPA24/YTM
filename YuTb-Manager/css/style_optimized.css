@@ -1,0 +1,553 @@
+/* ============================================================
+   YouTube URL Manager — дизайн-система
+   ============================================================ */
+
+/* ---------- Дизайн-токены ---------- */
+:root {
+  --bg-app: #0b0e14;
+  --bg-base: #10141c;
+  --bg-surface: #151a24;
+  --bg-raised: #1a2029;
+  --bg-overlay: #232b3a;
+  --bg-input: #1a202c;
+
+  --border: rgba(148, 163, 184, 0.13);
+  --border-strong: rgba(148, 163, 184, 0.28);
+
+  --text-1: #eceff6;
+  --text-2: #a3abc0;
+  --text-3: #6a7390;
+  --text-muted: #6a7390;
+
+  --accent: #2dd4bf;
+  --accent-strong: #14b8a6;
+  --accent-soft: rgba(45, 212, 191, 0.12);
+  --accent-text: #04231e;
+
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #f87171;
+  --info: #60a5fa;
+
+  --st-queue: #fbbf24;
+  --st-later: #60a5fa;
+  --st-watching: #a78bfa;
+  --st-watched: #34d399;
+  --st-archived: #8b95ad;
+
+  --yt-red: #ff0000; /* фирменный красный YouTube — лого-иконка ▶ приложения */
+
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 16px;
+
+  --shadow-sm: 0 1px 2px rgba(2, 6, 12, 0.4);
+  --shadow-md: 0 6px 18px rgba(2, 6, 12, 0.45);
+  --shadow-lg: 0 18px 48px rgba(2, 6, 12, 0.55);
+
+  --t-fast: 140ms;
+  --t-normal: 220ms;
+  --transition-fast: var(--t-fast) var(--ease);
+  --transition-normal: var(--t-normal) var(--ease);
+  --ease: cubic-bezier(0.33, 1, 0.68, 1);
+
+  --row-height: 48px;
+  --toolbar-height: 52px;
+  --titlebar-height: 40px;
+  --details-width: 340px;
+  --sidebar-width: 260px;
+  --sidebar-rail: 76px;
+
+  /* --- Палитра боковой панели / плавающих окон — НАША фирменная гамма
+     (тёмно-синие фоны + бирюзовый акцент, как в основной области приложения;
+     DeepSeek-структура сохранена, цвета — родные) --- */
+  --ds-bg: var(--bg-surface);
+  --ds-blue: var(--accent);
+  --ds-blue-hover: var(--accent-strong);
+  --ds-text: var(--text-2);
+  --ds-text-dim: var(--text-2);
+  --ds-text-faint: var(--text-3);
+  --ds-hover: rgba(148, 163, 184, 0.10);
+  --ds-active: rgba(148, 163, 184, 0.16);
+
+  /* --- БАЗОВАЯ ШИРИНА КОЛОНОК --- */
+  --col-title: 350px;
+  --col-channel: 150px;
+  --col-status: 120px;
+  --col-duration: 100px;
+  --col-published: 120px;
+
+  --font: "Inter", "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ---------- Сброс ---------- */
+*, ::before, ::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body { font-family: var(--font); background: var(--bg-app); color: var(--text-1); line-height: 1.45; height: 100vh; overflow: hidden; -webkit-font-smoothing: antialiased; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button { cursor: pointer; font: inherit; color: inherit; background: none; border: none; }
+input, select, textarea { font: inherit; color: var(--text-1); background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--r-md); padding: 8px 12px; transition: border-color var(--transition-fast), box-shadow var(--transition-fast); }
+input::placeholder, textarea::placeholder { color: var(--text-3); }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent-strong); box-shadow: 0 0 0 3px var(--accent-soft); }
+select { cursor: pointer; }
+
+/* ---------- Скроллбары ---------- */
+* { scrollbar-width: thin; scrollbar-color: rgba(148, 163, 184, 0.25) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.22); border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
+*::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.4); background-clip: content-box; }
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+::selection { background: rgba(45, 212, 191, 0.3); }
+
+/* ---------- Утилиты ---------- */
+.hidden { display: none !important; }
+.icon { width: 16px; height: 16px; flex-shrink: 0; display: block; }
+.icon--sm { width: 14px; height: 14px; }
+.icon--lg { width: 20px; height: 20px; }
+
+/* ============================================================
+   Каркас приложения
+   ============================================================ */
+.app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+.tb-dropdown__menu.tb-dropdown__menu--right { left: auto; right: 0; transform-origin: top right; }
+.tb-dropdown__item--muted { color: var(--text-3); cursor: default; font-size: 0.85rem; }
+.tb-dropdown__item--muted:hover { background: transparent; color: var(--text-3); }
+
+/* ---------- Панель инструментов ---------- */
+.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: var(--toolbar-height); padding: 8px 14px; background: var(--bg-base); border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 900; overflow-x: auto; overflow-y: hidden; white-space: nowrap; }
+.toolbar__left { display: flex; align-items: center; flex-wrap: nowrap; }
+.toolbar__right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.tb-group { display: flex; gap: 2px; }
+.tb-btn { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: var(--r-md); color: var(--text-2); transition: background var(--transition-fast), color var(--transition-fast), transform var(--transition-fast); }
+.tb-btn:hover { background: var(--bg-overlay); color: var(--text-1); }
+.tb-btn:active { transform: scale(0.96); }
+.tb-btn:disabled { opacity: 0.35; cursor: default; pointer-events: none; }
+/* v8.5: удалены мёртвые .tb-btn--primary (была кнопка A2e #menuAddLinkBtn)
+   и .tb-btn--menu (остаток удалённой в 8.3 кнопки A2a). */
+.tb-sep { width: 1px; height: 22px; background: var(--border-strong); margin: 0 10px; flex-shrink: 0; }
+.tb-arrow { width: 12px; height: 12px; flex-shrink: 0; }
+
+/* ---------- Выпадающие меню ---------- */
+.tb-dropdown { position: relative; display: flex; }
+.tb-dropdown__menu { position: absolute; top: calc(100% + 6px); left: 0; min-width: 200px; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-lg); padding: 6px; z-index: 1000; display: none; transform-origin: top left; }
+.tb-dropdown:hover .tb-dropdown__menu, .tb-dropdown.active .tb-dropdown__menu { display: block; animation: menu-in var(--t-fast) var(--ease); }
+@keyframes menu-in { from { opacity: 0; transform: translateY(-4px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.tb-dropdown__item { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 10px; border-radius: var(--r-md); color: var(--text-2); font-size: 0.92rem; text-align: left; white-space: nowrap; transition: background var(--transition-fast), color var(--transition-fast); }
+.tb-dropdown__item:hover { background: var(--bg-overlay); color: var(--text-1); }
+.tb-dropdown__item.active { color: var(--accent); font-weight: 500; }
+.tb-dropdown__item.active::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+.tb-dropdown__sep { height: 1px; background: var(--border); margin: 6px 8px; }
+
+/* ---------- Переключатель вида ---------- */
+.view-switcher { display: flex; padding: 3px; margin: 0 10px; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--r-md); }
+.view-btn { width: 38px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: var(--r-sm); color: var(--text-3); transition: background var(--transition-fast), color var(--transition-fast); }
+.view-btn:hover { color: var(--text-1); }
+.view-btn.active { background: var(--bg-overlay); color: var(--text-1); box-shadow: var(--shadow-sm); }
+
+/* ---------- Поиск (внутри сайдбара, как у DeepSeek) ---------- */
+.sidebar__search { position: relative; display: flex; align-items: center; padding: 8px 14px 6px; flex-shrink: 0; }
+.sidebar__search .search-icon { position: absolute; left: 26px; display: flex; color: var(--ds-text-faint); pointer-events: none; }
+.sidebar__search #searchInput { width: 100%; height: 38px; padding: 0 34px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 12px; color: var(--text-1); font-size: 14px; }
+.sidebar__search #searchInput::placeholder { color: var(--ds-text-faint); }
+.sidebar__search #searchInput:focus { background: var(--bg-input); border-color: var(--accent-strong); box-shadow: 0 0 0 3px var(--accent-soft); }
+.sidebar__search .search-clear { position: absolute; right: 24px; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 50%; color: var(--ds-text-faint); transition: background var(--transition-fast), color var(--transition-fast); }
+.sidebar__search .search-clear:hover { background: rgba(148, 163, 184, 0.16); color: var(--text-1); }
+
+/* ============================================================
+   Основная область
+   ============================================================ */
+.main { display: flex; flex: 1; overflow: hidden; min-width: 0; position: relative; }
+
+/* ============================================================
+   Сайдбар — СТРУКТУРА как у DeepSeek, ЦВЕТА — наши фирменные
+   ============================================================ */
+.sidebar { width: var(--sidebar-width); flex-shrink: 0; background: var(--ds-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; overflow: visible; transition: width var(--t-normal) var(--ease), transform var(--t-normal) var(--ease); }
+.sidebar__header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 16px 14px 6px; flex-shrink: 0; }
+.sidebar__logo { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.sidebar__logo-icon { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 9px; background: var(--yt-red); color: #ffffff; box-shadow: 0 4px 14px rgba(255, 0, 0, 0.32); flex-shrink: 0; }
+.sidebar__logo-text { display: flex; flex-direction: column; min-width: 0; }
+.sidebar__logo-name { font-size: 15px; font-weight: 600; color: var(--text-1); letter-spacing: 0.1px; white-space: nowrap; }
+.sidebar__logo-version { font-size: 10.5px; color: var(--ds-text-faint); white-space: nowrap; }
+.sidebar__collapse { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 10px; color: var(--ds-text-dim); flex-shrink: 0; transition: background var(--transition-fast), color var(--transition-fast); }
+.sidebar__collapse:hover { background: rgba(148, 163, 184, 0.16); color: var(--text-1); }
+.sidebar__actions { padding: 12px 14px 4px; flex-shrink: 0; }
+.sidebar__new-btn { display: flex; align-items: center; justify-content: center; gap: 9px; width: 100%; height: 42px; padding: 0 18px; background: var(--ds-blue); color: var(--accent-text); font-size: 14.5px; font-weight: 600; border-radius: 14px; transition: background var(--transition-fast), transform var(--transition-fast); }
+.sidebar__new-btn:hover { background: var(--ds-blue-hover); color: var(--accent-text); }
+.sidebar__new-btn:active { transform: scale(0.98); }
+.sidebar__new-icon { display: flex; }
+.sidebar__nav { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 4px 12px 12px; }
+.sidebar__section-label { padding: 14px 10px 6px; font-size: 12px; font-weight: 500; color: var(--ds-text-faint); white-space: nowrap; user-select: none; }
+.nav-list { list-style: none; display: flex; flex-direction: column; gap: 1px; }
+.nav-item { display: flex; align-items: center; padding: 8px 10px; border-radius: 10px; color: var(--ds-text); cursor: pointer; user-select: none; transition: background var(--transition-fast), color var(--transition-fast); }
+.nav-item:hover { background: var(--ds-hover); color: var(--text-1); }
+.nav-item.active { background: var(--ds-active); color: var(--text-1); font-weight: 500; }
+.nav-item-content { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.nav-item-icon { display: flex; color: var(--ds-text-faint); transition: color var(--transition-fast); }
+.nav-item:hover .nav-item-icon, .nav-item.active .nav-item-icon { color: var(--ds-text-dim); }
+.nav-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.nav-count { min-width: 20px; padding: 1px 7px; border-radius: 999px; background: rgba(148, 163, 184, 0.12); color: var(--ds-text-faint); font-size: 11.5px; font-weight: 600; text-align: center; font-variant-numeric: tabular-nums; }
+.nav-item.active .nav-count { background: rgba(148, 163, 184, 0.2); color: var(--ds-text-dim); }
+.nav-item--empty { padding: 6px 10px; color: var(--ds-text-faint); cursor: default; font-size: 13px; }
+.nav-item--empty:hover { background: transparent; color: var(--ds-text-faint); }
+
+/* Rail-режим: свёрнутая панель-«рельса» как у DeepSeek.
+   Кнопки свертывания в свёрнутом виде НЕТ — панель разворачивает клик по самой полосе. */
+.sidebar.collapsed { width: var(--sidebar-rail); cursor: pointer; }
+.sidebar.collapsed .sidebar__collapse { display: none; }
+.sidebar.collapsed .sidebar__header { padding: 16px 8px 6px; }
+.sidebar.collapsed .sidebar__logo { justify-content: center; }
+.sidebar.collapsed .sidebar__logo-text { display: none; }
+.sidebar.collapsed .sidebar__actions { padding: 12px 8px 4px; }
+.sidebar.collapsed .sidebar__new-btn { width: 42px; height: 42px; padding: 0; border-radius: 13px; }
+.sidebar.collapsed .sidebar__new-label { display: none; }
+.sidebar.collapsed .sidebar__search { display: none; }
+.sidebar.collapsed .sidebar__nav { display: none; }
+.sidebar.collapsed .sidebar__footer { padding: 10px 8px 12px; }
+.sidebar.collapsed .sidebar-profile-btn { justify-content: center; padding: 8px 0; gap: 0; }
+.sidebar.collapsed .profile-name, .sidebar.collapsed .tb-arrow { display: none; }
+.sidebar :focus-visible { outline-color: var(--ds-blue); }
+
+.content { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg-base); min-width: 0; }
+.content-body { flex: 1; display: flex; overflow: hidden; min-width: 0; }
+
+.breadcrumb { display: flex; align-items: center; gap: 2px; padding: 8px 16px; background: var(--bg-base); border-bottom: 1px solid var(--border); flex-shrink: 0; overflow-x: auto; white-space: nowrap; }
+.crumb { display: inline-flex; align-items: center; gap: 7px; padding: 5px 10px; border-radius: var(--r-md); color: var(--text-2); font-size: 0.9rem; cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: background var(--transition-fast), color var(--transition-fast); }
+.crumb:hover { background: var(--bg-overlay); color: var(--text-1); }
+.crumb .icon { color: var(--text-3); }
+.crumb--current { color: var(--text-1); font-weight: 600; cursor: default; }
+.crumb--current:hover { background: none; }
+.crumb--current .icon { color: var(--accent); }
+.crumb-sep { color: var(--text-3); padding: 0 2px; flex-shrink: 0; font-size: 0.85rem; }
+
+/* ---------- Таблица ---------- */
+.list-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+.table-wrapper { flex: 1; display: flex; flex-direction: column; overflow: auto; min-width: 0; }
+
+.table-header { display: flex; padding: 0 16px; background: var(--bg-base); border-bottom: 1px solid var(--border); user-select: none; flex-shrink: 0; position: sticky; top: 0; z-index: 10; }
+.th { display: flex; align-items: center; height: 40px; padding: 0 10px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; position: relative; transition: color var(--transition-fast); border-right: 1px solid var(--border); }
+.th:first-child { padding-left: 6px; }
+.th:hover { color: var(--text-1); }
+.th .sort-arrow { margin-left: 5px; font-size: 0.8em; color: var(--accent); }
+
+/* «Статус», «Длительность», «Дата» — данные стандартные: ширина жёстко
+   зафиксирована и не меняется ни ползунком, ни настройками (ползунков нет). */
+.th--status, .tcell--status { flex: 0 0 var(--col-status); width: var(--col-status); }
+.th--duration, .tcell--duration { flex: 0 0 var(--col-duration); width: var(--col-duration); }
+.th--published, .tcell--published { flex: 0 0 var(--col-published); width: var(--col-published); }
+
+/* «Канал» — фиксированная ширина, при необходимости меняется пользователем
+   (одна из двух колонок с ползунком). */
+.th--channel, .tcell--channel { flex: 0 0 var(--col-channel); width: var(--col-channel); }
+
+/* «Название» — единственная резиновая колонка: заполняет всё свободное место,
+ расширяется при увеличении окна и сжимается при уменьшении (пол 80px). */
+.th--name, .tcell--name { flex: 1 1 var(--col-title); min-width: 80px; }
+
+/* Ручная ширина «Название» (границу перетаскивали мышью) — это МИНИМУМ:
+ колонка всё равно заполняет свободное место, поэтому «Дата» ВСЕГДА
+ прилегает к правому краю области таблицы без пустого зазора.
+ Если заданная ширина больше окна — появляется прокрутка.
+ Двойной клик по границе возвращает авторежим. */
+body.title-manual .th--name,
+body.title-manual .tcell--name { flex: 1 0 var(--col-title); min-width: 80px; }
+
+/* Во время перетаскивания границы «Название» колонка следует за курсором
+ точно (авторастяжение временно выключено); после отпускания — снова
+ заполняет свободное место. */
+body.title-dragging .th--name,
+body.title-dragging .tcell--name { flex-grow: 0; }
+
+/* «Дата» — крайняя правая колонка: заголовок и значения прижаты к правому
+ краю колонки, вплотную к правому краю области таблицы. */
+.th--published, .tcell--published { justify-content: flex-end; text-align: right; }
+
+/* Минимальная ширина таблицы задаётся ФОРМУЛОЙ, а не содержимым ячеек —
+ поэтому заголовок и все строки всегда имеют одинаковую ширину и выровнены
+ пиксель в пиксель при любом размере окна и любой длине названий.
+ 32px = горизонтальные отступы (padding: 0 16px). */
+.table-header, .table-body {
+  min-width: calc(80px + var(--col-channel) + var(--col-status) + var(--col-duration) + var(--col-published) + 32px);
+}
+body.title-manual .table-header,
+body.title-manual .table-body {
+  min-width: calc(var(--col-title) + var(--col-channel) + var(--col-status) + var(--col-duration) + var(--col-published) + 32px);
+}
+
+/* Убираем рамку у последнего элемента */
+.th:last-child { border-right: none; }
+
+/* Ползунок для изменения ширины колонки: полностью внутри ячейки,
+   т.к. .th имеет overflow:hidden и обрезал бы выступающую часть */
+.resizer {
+  position: absolute; right: 0; top: 0; bottom: 0;
+  width: 8px; cursor: col-resize; background: transparent; z-index: 20;
+}
+.resizer:hover, .resizer.dragging {
+  background: var(--accent-soft);
+}
+
+.table-body { flex: 1; padding-bottom: 8px; }
+.table-empty { padding: 48px 20px; text-align: center; color: var(--text-3); }
+
+.trow { display: flex; align-items: center; height: var(--row-height); padding: 0 16px; border-radius: var(--r-md); user-select: none; cursor: pointer; transition: background var(--transition-fast); }
+.trow + .trow { margin-top: 2px; }
+.trow:hover { background: var(--bg-overlay); }
+.trow.selected { background: var(--accent-soft); box-shadow: inset 0 0 0 1px rgba(45, 212, 191, 0.35); }
+.tcell { padding: 0 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 8px; color: var(--text-2); }
+.tcell:first-child { padding-left: 6px; }
+.tcell:last-child { padding-right: 6px; }
+.tcell--name { color: var(--text-1); font-weight: 500; }
+.tcell--duration, .tcell--published { font-variant-numeric: tabular-nums; }
+
+.trow--folder { font-weight: 500; }
+.trow--parent { opacity: 0.85; }
+.trow--parent .folder-icon { color: var(--text-3); }
+.row-thumb { width: 56px; height: 32px; object-fit: cover; border-radius: var(--r-sm); margin: 0; flex-shrink: 0; background: var(--bg-overlay); border: 1px solid var(--border); }
+.folder-icon { display: flex; flex-shrink: 0; color: var(--warning); }
+
+/* ---------- Бейдж статуса ---------- */
+.status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 500; white-space: nowrap; flex-shrink: 0; }
+.status-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.status-badge--queue { color: var(--st-queue); background: rgba(251, 191, 36, 0.12); }
+.status-badge--later { color: var(--st-later); background: rgba(96, 165, 250, 0.12); }
+.status-badge--watching { color: var(--st-watching); background: rgba(167, 139, 250, 0.12); }
+.status-badge--watched { color: var(--st-watched); background: rgba(52, 211, 153, 0.12); }
+.status-badge--archived { color: var(--st-archived); background: rgba(139, 149, 173, 0.14); }
+
+/* ---------- Мозаика ---------- */
+.mosaic-view { display: flex; flex-wrap: wrap; gap: 14px; padding: 16px; overflow-y: auto; align-content: flex-start; }
+.mosaic-card { width: calc(640px * var(--mosaic-size, 50) / 100); flex-shrink: 0; border-radius: var(--r-lg); overflow: hidden; background: var(--bg-surface); border: 1px solid var(--border); box-shadow: var(--shadow-sm); cursor: pointer; transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast); }
+.mosaic-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: var(--border-strong); }
+.mosaic-card.selected { border-color: var(--accent-strong); box-shadow: 0 0 0 2px var(--accent-soft), var(--shadow-md); }
+.mosaic-card__thumb { position: relative; padding-top: 56.25%; background: var(--bg-overlay); }
+.mosaic-card__thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.mosaic-card__duration, .mosaic-card__count { position: absolute; bottom: 8px; right: 8px; background: rgba(8, 11, 16, 0.82); backdrop-filter: blur(4px); color: #fff; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+.mosaic-card__body { padding: 12px 14px; }
+.mosaic-card__title { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mosaic-card__icon { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); line-height: 1; display: flex; }
+.mosaic-card__icon svg { width: 34px; height: 34px; }
+.mosaic-card__folder-icon { color: var(--warning); } .mosaic-card__parent-icon { color: var(--text-3); }
+
+/* ============================================================
+   Панель «Подробности» — отдельное плавающее окно над страницей
+   ============================================================ */
+.details-panel { position: fixed; top: 64px; right: 16px; width: min(var(--details-width), calc(100vw - 32px)); max-height: calc(100vh - 112px); display: flex; flex-direction: column; background: var(--bg-raised); border: 1px solid var(--border-strong); border-radius: 16px; box-shadow: 0 24px 64px rgba(2, 6, 12, 0.55), 0 2px 10px rgba(2, 6, 12, 0.4); overflow: hidden; z-index: 1500; animation: details-in var(--t-normal) var(--ease); }
+@keyframes details-in { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: translateX(0); } }
+.resize-handle-v { position: absolute; left: 0; top: 0; bottom: 0; width: 9px; cursor: col-resize; background: transparent; z-index: 6; transition: background-color var(--transition-fast); }
+.resize-handle-v:hover, .resize-handle-v.dragging, body.resizing .resize-handle-v { background: rgba(45, 212, 191, 0.4); }
+body.resizing { cursor: col-resize; user-select: none; }
+body.resizing .details-panel { transition: none; animation: none; }
+.details-header { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+.details-header h2 { font-size: 15px; font-weight: 600; color: var(--text-1); }
+.details-close { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 9px; color: var(--ds-text-dim); transition: background var(--transition-fast), color var(--transition-fast); }
+.details-close:hover { background: var(--bg-overlay); color: var(--text-1); }
+.details-body { padding: 16px 18px; overflow-y: auto; }
+.details-section { display: flex; flex-direction: column; gap: 16px; }
+.details-item { display: flex; flex-direction: column; gap: 6px; }
+.details-label { color: var(--ds-text-faint); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; }
+.details-value { color: var(--text-1); word-break: break-word; }
+.details-value a { color: var(--accent); }
+.details-panel input, .details-panel select, .details-panel textarea { background: var(--bg-input); border-color: var(--border); }
+.details-panel input:focus, .details-panel select:focus, .details-panel textarea:focus { border-color: var(--accent-strong); box-shadow: 0 0 0 3px var(--accent-soft); }
+.details-panel .btn-primary { background: var(--ds-blue); color: var(--accent-text); }
+.details-panel .btn-primary:hover { background: var(--ds-blue-hover); color: var(--accent-text); }
+.details-panel .btn-secondary { background: var(--bg-overlay); color: var(--text-1); border: 1px solid var(--border); }
+.details-value select, .details-value input, .details-value textarea { width: 100%; }
+.details-item--thumb { margin: -2px -2px 2px; }
+.details-item--thumb img { display: block; width: 100%; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-overlay); aspect-ratio: 16 / 9; object-fit: cover; }
+.detail-hint { color: var(--ds-text-faint); font-size: 0.8rem; }
+.details-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+
+/* ============================================================
+   Формы и кнопки
+   ============================================================ */
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; margin-bottom: 7px; color: var(--text-2); font-size: 0.85rem; font-weight: 500; }
+.setting-label-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.setting-label-row label { margin-bottom: 0; }
+.setting-value { font-size: 0.85rem; font-weight: 600; color: var(--accent); background: var(--accent-soft); border-radius: var(--r-sm); padding: 2px 10px; min-width: 52px; text-align: center; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.form-group input[type="range"] { width: 100%; margin-top: 4px; accent-color: var(--accent); }
+.form-control { width: 100%; padding: 9px 12px; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--r-md); color: var(--text-1); }
+.form-control:focus { outline: none; border-color: var(--accent-strong); box-shadow: 0 0 0 3px var(--accent-soft); }
+.form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 9px 16px; border-radius: var(--r-md); font-size: 0.92rem; font-weight: 500; transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast); }
+.btn:active { transform: scale(0.98); }
+.btn-primary { background: var(--accent); color: var(--accent-text); }
+.btn-primary:hover { background: var(--accent-strong); color: var(--accent-text); }
+.btn-secondary { background: var(--bg-overlay); color: var(--text-1); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--bg-raised); }
+
+/* ============================================================
+   Модальные окна
+   ============================================================ */
+.modal-overlay { position: fixed; inset: 0; background: rgba(6, 9, 14, 0.66); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; z-index: 2000; animation: fade-in var(--t-fast) var(--ease); }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+.modal { background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--r-xl); box-shadow: var(--shadow-lg); width: min(90%, 560px); max-height: 88vh; display: flex; flex-direction: column; overflow: hidden; animation: modal-in var(--t-normal) var(--ease); }
+@keyframes modal-in { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.modal__header { padding: 18px 20px 14px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.modal__header h2 { font-size: 1.05rem; font-weight: 600; }
+.modal__body { padding: 18px 20px; overflow-y: auto; flex: 1; }
+.modal__footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
+.modal__close { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: var(--r-md); color: var(--text-3); font-size: 1.15rem; transition: background var(--transition-fast), color var(--transition-fast); }
+.modal__close:hover { background: var(--bg-overlay); color: var(--text-1); }
+.modal-btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: var(--r-md); background: var(--bg-overlay); color: var(--text-1); font-weight: 500; border: 1px solid var(--border); transition: background var(--transition-fast), border-color var(--transition-fast); }
+.modal-btn:hover { background: var(--bg-surface); border-color: var(--border-strong); }
+.modal-btn--primary { background: var(--accent); border-color: transparent; color: var(--accent-text); }
+.modal-btn--primary:hover { background: var(--accent-strong); color: var(--accent-text); }
+.modal-btn--danger { background: rgba(248, 113, 113, 0.12); border-color: rgba(248, 113, 113, 0.3); color: var(--danger); }
+.modal-btn--danger:hover { background: rgba(248, 113, 113, 0.2); color: var(--danger); }
+
+/* ============================================================
+   Контекстное меню
+   ============================================================ */
+.ctx-menu { position: fixed; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-lg); z-index: 2000; min-width: 210px; padding: 6px; display: none; }
+.ctx-menu.visible, .ctx-menu.open { display: block; animation: menu-in var(--t-fast) var(--ease); }
+.ctx-section { padding: 2px 0; }
+.ctx-menu__item { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 10px; cursor: pointer; white-space: nowrap; text-align: left; border-radius: var(--r-md); color: var(--text-2); font-size: 0.92rem; transition: background var(--transition-fast), color var(--transition-fast); }
+.ctx-menu__item:hover { background: var(--bg-overlay); color: var(--text-1); }
+.ctx-menu__item.active { color: var(--accent); font-weight: 500; }
+.ctx-menu__item.active::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+.ctx-menu__item--danger { color: var(--danger); }
+.ctx-menu__item--danger:hover { background: rgba(248, 113, 113, 0.12); color: var(--danger); }
+.ctx-submenu { position: relative; }
+.ctx-menu--nested { position: absolute; left: calc(100% - 6px); top: -6px; display: none; margin-left: 2px; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-lg); padding: 6px; min-width: 180px; }
+.ctx-submenu:hover .ctx-menu--nested, .ctx-menu--nested.open { display: block; animation: menu-in var(--t-fast) var(--ease); }
+.ctx-menu--nested.flip { left: auto; right: calc(100% - 6px); margin-left: 0; margin-right: 2px; }
+/* ===== v8: мультивыбор строк + расширенное контекстное меню ===== */
+.trow.multi-selected { background: var(--accent-soft); box-shadow: inset 0 0 0 1px rgba(45, 212, 191, 0.35); }
+.mosaic-card.multi-selected { border-color: var(--accent-strong); box-shadow: 0 0 0 2px var(--accent-soft), var(--shadow-md); }
+.ctx-menu__title { padding: 6px 10px 7px; margin: 0 0 2px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; color: var(--accent); border-bottom: 1px solid var(--border); }
+.ctx-menu__divider { height: 1px; background: var(--border); margin: 4px 6px; }
+.ctx-menu__item--new { color: var(--accent); font-weight: 500; }
+.ctx-menu__item--new:hover { color: var(--accent-strong); background: var(--accent-soft); }
+.modal--sm { width: min(90%, 420px); }
+.form-hint { font-size: 0.8rem; color: var(--text-muted); line-height: 1.45; margin-top: -2px; }
+.form-hint strong { color: var(--text-2); font-weight: 600; }
+
+/* ============================================================
+   История изменений
+   ============================================================ */
+.history-list { display: flex; flex-direction: column; gap: 10px; }
+.history-item { border: 1px solid var(--border); border-radius: var(--r-lg); padding: 12px 14px; background: var(--bg-base); }
+.history-item__time { color: var(--text-3); font-size: 0.8rem; margin-bottom: 8px; font-variant-numeric: tabular-nums; }
+.history-item__change { font-size: 0.9rem; padding: 3px 0; color: var(--text-2); }
+.history-item__fetch-badge { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; background: var(--accent-soft); color: var(--accent); }
+
+/* ============================================================
+   Toast-уведомления
+   ============================================================ */
+#toast-container { position: fixed; top: 16px; right: 16px; z-index: 3000; display: flex; flex-direction: column; gap: 8px; max-width: 400px; pointer-events: none; }
+.toast { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: var(--bg-raised); border: 1px solid var(--border-strong); border-left: 3px solid var(--info); border-radius: var(--r-lg); box-shadow: var(--shadow-md); color: var(--text-1); font-size: 0.92rem; pointer-events: auto; animation: toast-in var(--t-normal) var(--ease); }
+@keyframes toast-in { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
+.toast--success { border-left-color: var(--success); } .toast--success .toast__icon { color: var(--success); }
+.toast--error { border-left-color: var(--danger); } .toast--error .toast__icon { color: var(--danger); }
+.toast--warn { border-left-color: var(--warning); } .toast--warn .toast__icon { color: var(--warning); }
+.toast--info { border-left-color: var(--info); } .toast--info .toast__icon { color: var(--info); }
+.toast__icon { display: flex; flex-shrink: 0; font-size: 1rem; line-height: 1; }
+.toast__msg { flex: 1; min-width: 0; }
+.toast__close { width: 22px; height: 22px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; color: var(--text-3); font-size: 0.9rem; transition: background var(--transition-fast), color var(--transition-fast); }
+.toast__close:hover { background: var(--bg-overlay); color: var(--text-1); }
+/* v8.6: полоса прогресса в постоянном тосте (обновление метаданных из настроек
+   и из контекстного меню мультивыбора) */
+.toast { position: relative; overflow: hidden; }
+.toast__progress { position: absolute; left: 0; bottom: 0; height: 3px; width: 0%; background: var(--info); border-radius: 0 2px 2px 0; transition: width var(--t-normal) var(--ease); pointer-events: none; }
+
+/* ============================================================
+   Статус-бар
+   ============================================================ */
+.statusbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 7px 16px; background: var(--bg-surface); border-top: 1px solid var(--border); color: var(--text-3); font-size: 0.8rem; flex-shrink: 0; user-select: none; }
+.statusbar #statusSel { color: var(--accent); font-weight: 600; }
+
+/* ============================================================
+   Профиль в футере сайдбара (структура DeepSeek, наши цвета)
+   ============================================================ */
+.sidebar__footer { margin-top: auto; padding: 10px 12px 12px; position: relative; z-index: 50; flex-shrink: 0; }
+.sidebar-profile-btn { display: flex; align-items: center; gap: 10px; width: 100%; background: transparent; border: none; color: var(--text-1); padding: 8px 10px; cursor: pointer; border-radius: 10px; transition: background var(--transition-fast); font-family: inherit; font-size: 13.5px; }
+.sidebar-profile-btn:hover { background: var(--ds-hover); }
+.profile-avatar { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-strong); font-size: 13px; font-weight: 600; flex-shrink: 0; overflow: hidden; }
+.profile-avatar .icon { width: 16px; height: 16px; }
+.sidebar-profile-btn .profile-name { flex-grow: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ds-text); }
+.sidebar-profile-btn .tb-arrow { display: flex; color: var(--ds-text-faint); flex-shrink: 0; }
+.tb-dropdown__menu--up { bottom: calc(100% + 6px) !important; top: auto !important; left: 0; width: auto; min-width: 248px; box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.45); z-index: 100; }
+#profileDropdown .tb-dropdown__menu { background: var(--bg-raised); border: 1px solid var(--border); border-radius: 14px; padding: 6px; }
+#profileDropdown .tb-dropdown__item { color: var(--ds-text); }
+#profileDropdown .tb-dropdown__item:hover { background: var(--bg-overlay); color: var(--text-1); }
+#profileDropdown .tb-dropdown__item--muted { color: var(--ds-text-faint); }
+.tb-dropdown__info { padding: 8px 12px 4px; font-size: 11.5px; color: var(--ds-text-faint); line-height: 1.5; }
+.tb-dropdown__info strong { color: var(--ds-text-dim); font-weight: 600; }
+.tb-dropdown__links { display: flex; align-items: center; gap: 8px; padding: 2px 12px 8px; font-size: 12px; }
+.tb-dropdown__links span { color: var(--ds-text-faint); }
+.tb-dropdown__links a { color: var(--ds-text-dim); text-decoration: none; }
+.tb-dropdown__links a:hover { color: var(--text-1); text-decoration: underline; }
+
+/* ============================================================
+   Адаптивность (Dynamic via JS class)
+   ============================================================ */
+body.sidebar-overlay-mode .sidebar {
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  width: 280px;
+  height: 100%;
+  z-index: 1000;
+  transition: transform var(--t-normal) var(--ease), width var(--t-normal) var(--ease);
+}
+body.sidebar-overlay-mode .sidebar:not(.collapsed) { transform: translateX(0); box-shadow: 12px 0 40px rgba(0, 0, 0, 0.5); }
+/* Свёрнутая панель в оверлей-режиме — видимая полоса-rail у левого края (как на десктопе);
+   панель открывается кликом по полосе, отдельной кнопки в тулбаре больше нет. */
+body.sidebar-overlay-mode .sidebar.collapsed { transform: translateX(0); width: var(--sidebar-rail); box-shadow: none; }
+/* Контент отступает под плавающий rail, чтобы тулбар/крошки не уходили за полосу. */
+body.sidebar-overlay-mode .content { margin-left: var(--sidebar-rail); }
+body.sidebar-overlay-mode .sidebar-backdrop { display: none; position: absolute; inset: 0; background: rgba(0, 0, 0, 0.55); z-index: 999; }
+body.sidebar-overlay-mode .sidebar-backdrop.active { display: block; }
+
+@media (max-width: 768px) {
+  .details-panel { top: 0; right: 0; left: 0; bottom: 0; width: 100% !important; min-width: 0 !important; max-width: 100% !important; max-height: none; height: 100dvh; border-radius: 0; border: none; border-bottom: 1px solid var(--border-strong); animation: details-sheet-in var(--t-normal) var(--ease); }
+  .resize-handle-v { display: none !important; }
+  .mosaic-view { padding: 10px; }
+  .mosaic-card { width: 100%; max-width: calc(640px * var(--mosaic-size, 50) / 100); }
+}
+@keyframes details-sheet-in { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+/* ============================================================
+   v3.0: auth — экран входа, баннер YouTube-доступа, статус OAuth
+   ============================================================ */
+.auth-gate { position: fixed; inset: 0; z-index: 9990; display: flex; align-items: center; justify-content: center; background: var(--bg-app); padding: 24px; }
+.auth-gate.hidden { display: none; }
+.auth-gate__card { max-width: 420px; width: 100%; text-align: center; background: var(--bg-raised); border: 1px solid var(--border-strong); border-radius: var(--r-xl); padding: 40px 32px; box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45); }
+.auth-gate__icon { width: 64px; height: 64px; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #fff; background: linear-gradient(135deg, #ff0000 0%, #c4302b 100%); border-radius: var(--r-lg); }
+.auth-gate__title { margin: 0 0 8px; font-size: 22px; font-weight: 700; }
+.auth-gate__text { margin: 0 0 20px; color: var(--text-muted); line-height: 1.5; }
+.auth-gate__login { min-width: 240px; justify-content: center; padding: 10px 20px; font-size: 15px; }
+.auth-gate__hint { margin: 16px 0 0; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+.yt-access-banner { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; padding: 8px 16px; background: rgba(251, 191, 36, 0.10); border-top: 1px solid rgba(251, 191, 36, 0.35); border-bottom: 1px solid rgba(251, 191, 36, 0.35); color: var(--warning); font-size: 13px; line-height: 1.4; }
+.yt-access-banner.hidden { display: none; }
+.yt-access-banner__text { flex: 1 1 480px; }
+.yt-access-banner__btn { flex: 0 0 auto; padding: 5px 14px; font-size: 13px; color: #1a1205; background: var(--warning); border: none; border-radius: var(--r-sm); cursor: pointer; font-weight: 600; }
+.yt-access-banner__btn:hover { filter: brightness(1.08); }
+.auth-status { padding: 10px 12px; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--r-md); font-size: 13px; line-height: 1.5; }
+.auth-status__row { display: flex; align-items: center; gap: 8px; margin: 2px 0; }
+.auth-status__dot { flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
+.auth-status__dot--ok { background: var(--success); box-shadow: 0 0 6px rgba(52, 211, 153, 0.6); }
+.auth-status__dot--off { background: var(--danger); }
+.auth-status__off { color: var(--danger); }
+.tb-dropdown__item--accent { color: var(--accent); font-weight: 600; }
+/* ===== v27: окно «О программе» (Настройки → О программе) — пофайловые версии ===== */
+.about-app { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+.about-app strong { font-size: 15px; color: var(--text-1); }
+.about-app span { font-size: 13px; color: var(--text-muted); line-height: 1.45; }
+.about-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.about-table th { text-align: left; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); padding: 6px 10px; border-bottom: 1px solid var(--border-strong); }
+.about-table th:last-child, .about-table td.about-ver { text-align: right; }
+.about-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); }
+.about-table tr:last-child td { border-bottom: 0; }
+.about-table .about-file { color: var(--text-2); font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; font-size: 12px; }
+.about-table .about-ver { color: var(--accent); font-weight: 600; white-space: nowrap; }

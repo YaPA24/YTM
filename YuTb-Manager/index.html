@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YTM Manager</title>
+  <script>
+    /* ===== ВЕРСИИ ФАЙЛОВ (по файловая версионность) =====
+       Правило проекта: версия пишется ТОЛЬКО в том файле, который меняется.
+       • index.html            → window.APP_VERSIONS.index (здесь, показывается в шапке сайдбара)
+       • css/style_optimized.css → ?v= у тега <link> ниже
+       • js/services.bundle.js   → ?v= у тега <script> ниже
+       • js/ui.bundle.js         → ?v= у тега <script> ниже
+       • server.py             → константа APP_VERSION внутри файла (видна через /api/health)
+       Полный список версий: Настройки → «О программе» — собирается автоматически,
+       при выпуске это окно не правится. */
+    window.APP_VERSIONS = { index: '8.6' };
+  </script>
+  <link rel="stylesheet" href="css/style_optimized.css?v=30">
+</head>
+<body>
+  <div class="app">
+    <div class="main">
+      <div id="sidebarBackdrop" class="sidebar-backdrop"></div>
+      <aside id="sidebar" class="sidebar">
+        <div class="sidebar__header">
+          <div class="sidebar__logo">
+            <div class="sidebar__logo-icon"><svg class="icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.6 5.2a1.2 1.2 0 0 0-1.85 1v11.6a1.2 1.2 0 0 0 1.85 1l9.4-5.8a1.2 1.2 0 0 0 0-2z"/></svg></div>
+            <div class="sidebar__logo-text">
+              <span class="sidebar__logo-name">YTM Manager</span>
+              <span id="version-display" class="sidebar__logo-version"></span>
+            </div>
+          </div>
+          <button id="sidebarToggle" class="sidebar__collapse" title="Свернуть панель"><svg class="icon icon--lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="15" rx="3"/><path d="M9.5 4.5v15"/></svg></button>
+        </div>
+
+        <div class="sidebar__actions">
+          <button id="sidebarAddLinkBtn" class="sidebar__new-btn" title="Добавить ссылку">
+            <span class="sidebar__new-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+            <span class="sidebar__new-label">Добавить ссылку</span>
+          </button>
+        </div>
+
+        <div class="sidebar__search">
+          <span class="search-icon"><svg class="icon icon--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg></span>
+          <input id="searchInput" type="text" placeholder="Поиск" autocomplete="off">
+          <button id="searchClear" class="search-clear hidden" title="Очистить"><svg class="icon icon--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>
+
+        <div class="sidebar__nav">
+          <div class="sidebar__section-label">Коллекция</div>
+          <ul class="nav-list" data-filter="status">
+            <li class="nav-item active" data-filter="all">
+              <div class="nav-item-content">
+                <span class="nav-item-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></span>
+                <span class="nav-label">Все видео</span>
+                <span id="countAll" class="nav-count">0</span>
+              </div>
+            </li>
+            <li class="nav-item" data-filter="queue">
+              <div class="nav-item-content">
+                <span class="nav-item-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></span>
+                <span class="nav-label">В очереди</span>
+                <span id="countQueue" class="nav-count">0</span>
+              </div>
+            </li>
+            <li class="nav-item" data-filter="later">
+              <div class="nav-item-content">
+                <span class="nav-item-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span>
+                <span class="nav-label">Посмотреть позже</span>
+                <span id="countLater" class="nav-count">0</span>
+              </div>
+            </li>
+            <li class="nav-item" data-filter="watching">
+              <div class="nav-item-content">
+                <span class="nav-item-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+                <span class="nav-label">Смотрю</span>
+                <span id="countWatching" class="nav-count">0</span>
+              </div>
+            </li>
+            <li class="nav-item" data-filter="watched">
+              <div class="nav-item-content">
+                <span class="nav-item-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>
+                <span class="nav-label">Просмотрено</span>
+                <span id="countWatched" class="nav-count">0</span>
+              </div>
+            </li>
+            <li class="nav-item" data-filter="archived">
+              <div class="nav-item-content">
+                <span class="nav-item-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg></span>
+                <span class="nav-label">Архив</span>
+                <span id="countArchived" class="nav-count">0</span>
+              </div>
+            </li>
+          </ul>
+
+          <div class="sidebar__section-label">Папки</div>
+          <ul id="sidebarGroups" class="nav-list nav-list--groups"></ul>
+        </div>
+
+        <div class="sidebar__footer">
+          <div class="tb-dropdown" id="profileDropdown">
+            <button id="profileBtn" class="sidebar-profile-btn" title="Профиль и настройки">
+              <span id="profileAvatar" class="profile-avatar"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+              <span id="profileName" class="profile-name">Загрузка…</span>
+              <span class="tb-arrow"><svg class="icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></span>
+            </button>
+            <div id="profileMenu" class="tb-dropdown__menu tb-dropdown__menu--up">
+              <div class="tb-dropdown__item tb-dropdown__item--muted">Загрузка…</div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <main class="content">
+        <div class="toolbar">
+          <div class="toolbar__left">
+            <div class="tb-group">
+              <button id="navBackBtn" class="tb-btn" title="Назад (Alt+←)" disabled><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg></button>
+              <button id="navForwardBtn" class="tb-btn" title="Вперёд (Alt+→)" disabled><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg></button>
+            </div>
+            <div class="tb-sep"></div>
+            <div class="view-switcher" role="group" aria-label="Вид">
+              <button id="viewRowsBtn" class="view-btn active" title="Таблица"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
+              <button id="viewMosaicBtn" class="view-btn" title="Мозаика"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></button>
+            </div>
+          </div>
+        </div>
+
+        <nav id="breadcrumb" class="breadcrumb" aria-label="Путь"></nav>
+        <div class="content-body">
+          <div class="list-area">
+            <div id="tableWrapper" class="table-wrapper">
+              <div class="table-header">
+                <div class="th th--name" data-field="title">Название <span class="sort-arrow"></span></div>
+                <div class="th th--channel" data-field="channelTitle">Канал <span class="sort-arrow"></span></div>
+                <div class="th th--status" data-field="status">Статус <span class="sort-arrow"></span></div>
+                <div class="th th--duration" data-field="durationSeconds">Длительность <span class="sort-arrow"></span></div>
+                <div class="th th--published" data-field="publishedAt">Дата <span class="sort-arrow"></span></div>
+              </div>
+              <div id="tableBody" class="table-body"></div>
+              <div id="tableEmpty" class="table-empty hidden">Нет данных для отображения</div>
+            </div>
+            <div id="mosaicView" class="mosaic-view hidden"></div>
+            <div id="mosaicEmpty" class="table-empty hidden">Нет данных для отображения</div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <div id="statusbar" class="statusbar">
+      <span id="statusItems"></span>
+      <span id="statusSel" class="hidden"></span>
+    </div>
+
+    <div id="detailsPanel" class="details-panel hidden"></div>
+    <div id="resizeHandleV" class="resize-handle-v hidden"></div>
+
+    <div id="modals"></div>
+
+    <div id="ctxMenu" class="ctx-menu">
+      <div id="ctxBatchTitle" class="ctx-menu__title hidden"></div>
+      <div class="ctx-section ctx-link-section">
+        <button class="ctx-menu__item" data-action="open" data-single-only>Открыть в браузере</button>
+        <button class="ctx-menu__item" data-action="copy-url">Копировать URL</button>
+        <button class="ctx-menu__item" data-action="copy-title">Копировать название</button>
+        <div class="ctx-submenu">
+          <button id="ctxStatusBtn" class="ctx-menu__item">Статус в...</button>
+          <div id="ctxStatusSubmenu" class="ctx-menu ctx-menu--nested"></div>
+        </div>
+        <div class="ctx-submenu">
+          <button id="ctxMoveToFolder" class="ctx-menu__item">Переместить в...</button>
+          <div id="ctxMoveSubmenu" class="ctx-menu ctx-menu--nested"></div>
+        </div>
+        <button class="ctx-menu__item" data-action="refresh">Обновить метаданные</button>
+        <button class="ctx-menu__item" data-action="history" data-single-only>История изменений</button>
+        <button class="ctx-menu__item ctx-menu__item--danger" data-action="delete">Удалить</button>
+      </div>
+      <div class="ctx-section ctx-folder-section hidden">
+        <button class="ctx-menu__item ctx-menu__item--new" data-action="create-folder">+ Создать папку…</button>
+        <div class="ctx-menu__divider"></div>
+        <button class="ctx-menu__item" data-action="rename-folder">Переименовать</button>
+        <button class="ctx-menu__item ctx-menu__item--danger" data-action="delete-folder">Удалить</button>
+      </div>
+    </div>
+
+    <script src="js/services.bundle.js?v=14"></script>
+    <script src="js/ui.bundle.js?v=27"></script>
+  </div>
+</body>
+</html>
